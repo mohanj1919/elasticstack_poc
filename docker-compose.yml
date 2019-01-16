@@ -1,0 +1,180 @@
+version: "3"
+
+networks:
+  playalong:
+
+services:
+  mongo:
+    container_name: mongo
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    networks:
+      - playalong
+
+  redis:
+    container_name: redis
+    image: redis
+    command: redis-server
+    ports:
+      - 6379:6379
+    networks:
+      - playalong
+
+  rabbit:
+    container_name: rabbit
+    build:
+      context: ./rabbitmq
+      dockerfile: ./rabbitmq.Dockerfile
+    environment:
+      - RABBITMQ_ERLANG_COOKIE='secret_cookie'
+      - RABBITMQ_USER=rabbitmq
+      - RABBITMQ_PASSWORD=rabbitmq
+    networks:
+      - playalong
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+  ipladmin_api:
+    image: ipladmin:api
+    build:
+      context: ../ipladmin
+      dockerfile: ./dockerfiles/Dockerfile
+    command: node AdminServer.js
+    volumes:
+      - /usr/src/node_modules
+      - ../ipladmin/:/usr/src/
+    ports:
+      - 4000:4000
+    networks:
+      - playalong
+    environment: &curationenv
+      RABBITMQ_HOST: rabbit
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: rabbitmq
+      RABBITMQ_PASSWORD: rabbitmq
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LB_REDIS_HOST: redis
+      LB_REDIS_PORT: 6379
+      GP_REDIS_HOST: redis
+      GP_REDIS_PORT: 6379
+      MONGODB_URL: mongo
+      MONGODB_HOST: mongo
+      MONGODB_PORT: 27017
+      API_PORT: 3000
+    links:
+      - rabbit
+      - mongo
+      - redis
+    depends_on:
+      - rabbit
+      - mongo
+      - redis
+
+  iplserver_sc:
+    image: iplapi:latest
+    build:
+      context: ../iplserver
+      dockerfile: ./dockerfiles/sc/Dockerfile
+    volumes:
+      - /usr/src/node_modules
+      - ../iplserver/:/usr/src/
+    networks:
+      - playalong
+    links:
+      - redis
+    depends_on:
+      - redis
+    ports:
+      - 3000:3000
+    environment:
+      <<: *curationenv
+
+  iplserver_api:
+    image: iplapi:latest
+    build:
+      context: ../iplserver
+      dockerfile: ./dockerfiles/api/Dockerfile
+    volumes:
+      - /usr/src/node_modules
+      - ../iplserver/:/usr/src/
+    networks:
+      - playalong
+    ports:
+      - 5000:3000
+    links:
+      - redis
+      - mongo
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      <<: *curationenv
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.4
+    container_name: elasticsearch
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    networks:
+      - playalong
+    ports:
+      - 9200:9200
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:6.5.4
+    container_name: kibana
+    environment:
+      SERVER_NAME: kibana.example.org
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    networks:
+      - playalong
+    ports:
+      - 5601:5601
+    links:
+      - elasticsearch
+    depends_on:
+      - elasticsearch
+
+  logstash_server:
+    image: logstash:latest
+    container_name: logstash_server
+    build:
+      context: ./logstash
+      dockerfile: logstash.Dockerfile
+    command: -f /config/logstash.conf
+    volumes:
+      - ./logstash/:/config/
+    ports:
+      - 9600:9600
+      - 5044:5044
+    networks:
+      - playalong
+    links:
+      - elasticsearch
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    image: filebeat:latest
+    container_name: filebeat
+    build:
+      context: ./filebeat
+      dockerfile: filebeat.Dockerfile
+    volumes:
+      - ./filebeat/:/usr/share/filebeat/config/
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ../ipladmin/logs/:/logs/
+    links:
+      - kibana
+      - logstash_server
+    depends_on:
+      - kibana
+      - logstash_server
+    networks:
+      - playalong

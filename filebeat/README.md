@@ -1,0 +1,1 @@
+#command: --path.config /usr/share/filebeat/config -c ./filebeat.yml
