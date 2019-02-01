@@ -1,0 +1,105 @@
+
+https://www.elastic.co/guide/en/elasticsearch/reference/2.3/date.html
+PUT my_index
+{
+  "mappings": {
+    "audit": {
+      "properties": {
+        "timestamp": {
+          "type": "date"
+        },
+        "ipaddress": {
+          "type": "ip"
+        },
+        "phoneNo": {
+          "type": "keyword"
+        },
+        "email": {
+          "type": "keyword"
+        },
+        "request_url": {
+          "type": "string"
+        },
+        "request_params": {
+          "type": "nested"
+        }
+      }
+    }
+  }
+}
+
+
+GET audit-2019.01.18/audit/_search
+{
+  "query": {
+    "match": {
+      "allfields": "2019-01-18T06:29:50.575Z"
+    }
+  }
+}
+
+GET audit-2019.01.21/audit/_search
+{
+  "_source": ["message"],
+  "query": {
+    "bool": {
+      "should": [
+        { "match": { "allfields": "" }},
+        { "match": { "message.request_params.seasonId": "1" }}
+      ]
+    }
+  }
+}
+
+
+sample event: 
+{
+  "source" : "/logs/audit.log",
+  "@timestamp" : "2019-01-18T06:29:56.339Z",
+  "input" : {
+    "type" : "log"
+  },
+  "offset" : 1295,
+  "message" : {
+    "email" : "admintest@pa.com",
+    "phoneNo" : "9121522521",
+    "request_params" : {
+      "test" : "true",
+      "seasonId" : "1",
+      "all" : true
+    },
+    "ipaddress" : "::1",
+    "request_url" : "/admin/seasons/1/events/?test=true",
+    "level" : "INFO",
+    "timestamp" : "2019-01-18T06:29:50.575Z",
+    "type" : "audit"
+  },
+  "prospector" : {
+    "type" : "log"
+  },
+  "tags" : [
+    "beats_input_codec_plain_applied"
+  ],
+  "beat" : {
+    "name" : "1ecf0337d43f",
+    "version" : "6.5.4",
+    "hostname" : "1ecf0337d43f"
+  },
+  "host" : {
+    "architecture" : "x86_64",
+    "name" : "1ecf0337d43f",
+    "os" : {
+      "platform" : "centos",
+      "codename" : "Core",
+      "version" : "7 (Core)",
+      "family" : "redhat"
+    },
+    "containerized" : true
+  },
+  "@version" : "1",
+  "fields" : {
+    "log_type" : "audit",
+    "app" : "playalong"
+  }
+}
+
