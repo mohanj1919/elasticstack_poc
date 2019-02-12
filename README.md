@@ -1,14 +1,3 @@
-### this is a meta repo to work with playalong repositories
-
-clone following repositories.
-
-    iplserver
-    ipladmin
-    iplclient
-
-### questions
-1. are there any common servers (redis/mongo/etc) used for iplserver/ipladmin?
-
 
 ### environment variables
     
@@ -28,9 +17,6 @@ ubuntu:16.04
 redis
 mongo
 nginx
-
-http://localhost/?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwaG9uZU5vIjoiODgyODEwNDQ1NyIsImVtYWlsIjoidGVzdEBrYW5oYXRlY2guaW8iLCJhcHAiOiJpc2xhcHAiLCJpYXQiOjE1NDQ3OTYwOTcsImV4cCI6MTU1NzA5NjA5N30.cRNHZeO7Vl6qEjwkzA1Vi6h30q06p8FoUMlVMOE55qY
-
 
 
 volumes:
